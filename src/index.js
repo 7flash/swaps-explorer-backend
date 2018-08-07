@@ -20,6 +20,16 @@ stateRouter.get('/ethbtc', async (req, res) => {
   res.json(swaps)
 })
 
+stateRouter.get('/reputation/:address', async (req, res) => {
+  const address = req.query.address
+
+  const reputation = await state.fetchReputation(address)
+
+  res.json({
+    address, reputation
+  })
+})
+
 app.use('/state', stateRouter)
 
 app.listen(config.port, () => {
