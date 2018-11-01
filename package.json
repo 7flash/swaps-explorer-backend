@@ -19,6 +19,8 @@
     "eth-crypto": "^1.2.3",
     "fakeredis": "^2.0.0",
     "mocha": "^5.2.0",
-    "sinon": "^6.1.4"
+    "proxyquire": "^2.0.1",
+    "sinon": "^6.1.4",
+    "supertest": "^3.1.0"
   }
 }
