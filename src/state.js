@@ -36,6 +36,7 @@ class State {
       const sellerReputation = await this.fetchReputation(sellerAddress)
 
       swap.alice = {
+        asset: 'ETH',
         value: value,
         from: {
           address: sellerAddress,
@@ -44,6 +45,7 @@ class State {
       }
 
       swap.bob = {
+        asset: 'BTC',
         to: {
           address: buyerAddress,
           reputation: buyerReputation

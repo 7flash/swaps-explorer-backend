@@ -45,6 +45,7 @@ const expectedResponse = (swaps) => {
     return {
       status: 'success',
       alice:{
+        asset: 'ETH',
         value: value,
         from: {
           address: seller,
@@ -52,6 +53,7 @@ const expectedResponse = (swaps) => {
         },
       },
       bob: {
+        asset: 'BTC',
         to: {
           address: buyer,
           reputation: 1
