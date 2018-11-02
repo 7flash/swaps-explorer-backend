@@ -3,6 +3,7 @@ const sinon = require("sinon")
 const expect = require("chai").expect
 const redis = require("fakeredis")
 const { promisify } = require("util")
+const crypto = require("crypto")
 
 const randomSwaps = (count) => {
   let result = []
@@ -11,8 +12,9 @@ const randomSwaps = (count) => {
     const buyer = EthCrypto.createIdentity().address
     const seller = EthCrypto.createIdentity().address
     const value = Math.round(Math.random() * 1000).toString()
+    const secretHash = crypto.randomBytes(32).toString('hex')
 
-    result.push({ buyer, seller, value })
+    result.push({ buyer, seller, value, secretHash })
   }
 
   return result
@@ -21,15 +23,43 @@ const randomSwaps = (count) => {
 const setupMockDatabase = async ({ redisClient, swaps, swapsName, reputationName }) => {
   const hmset = promisify(redisClient.hmset).bind(redisClient)
   const incrby = promisify(redisClient.INCRBY).bind(redisClient)
+  const rpush = promisify(redisClient.rpush).bind(redisClient)
 
   for (let i = 0; i < swaps.length; i++) {
-    const buyer = swaps[i]['buyer']
-    const seller = swaps[i]['seller']
+    const { buyer, seller, secretHash } = swaps[i]
 
-    await hmset(`${swapsName}:${i}`, swaps[i])
+    await rpush(swapsName, secretHash)
+
+    await hmset(`${swapsName}:${secretHash}:deposit`, { buyer, seller, secretHash })
+    await hmset(`${swapsName}:${secretHash}:withdraw`, { buyer, seller })
+
     await incrby(`${reputationName}:${buyer}`, 1)
     await incrby(`${reputationName}:${seller}`, 1)
   }
+}
+
+const expectedResponse = (swaps) => {
+  const response = swaps.map((swap) => {
+    const { buyer, seller } = swap
+
+    return {
+      status: 'success',
+      alice:{
+        from: {
+          address: seller,
+          reputation: 1
+        },
+      },
+      bob: {
+        to: {
+          address: buyer,
+          reputation: 1
+        }
+      }
+    }
+  })
+
+  return response
 }
 
 const State = require('../src/state')
@@ -45,7 +75,7 @@ describe('Swaps', () => {
     redisClient = redis.createClient({ fast: true })
 
     swaps = randomSwaps(10)
-    swaps.push({ ...swaps[0] })
+    // swaps.push({ ...swaps[0] })
     await setupMockDatabase({ redisClient, swaps, swapsName, reputationName })
   })
 
@@ -56,7 +86,7 @@ describe('Swaps', () => {
       const reputation2 = await state.fetchReputation(swaps[0].buyer)
       const reputation1 = await state.fetchReputation(swaps[1].buyer)
 
-      expect(reputation2).to.be.equal(2)
+      expect(reputation2).to.be.equal(1)
       expect(reputation1).to.be.equal(1)
     })
 
@@ -71,19 +101,19 @@ describe('Swaps', () => {
 
   describe('Swaps State', () => {
     it('shold fetch all ETHBTC swaps from redis database', async () => {
-      const state = new State({ redisClient, swapsName })
+      const state = new State({ redisClient, swapsName, reputationName })
 
       const result = await state.fetchSwaps()
 
-      expect(result).to.be.deep.equal(swaps)
+      expect(result).to.be.deep.equal(expectedResponse(swaps))
     })
 
     it('should fetch range of ETHBTC swaps from redis database', async () => {
-      const state = new State({ redisClient, swapsName })
+      const state = new State({ redisClient, swapsName, reputationName })
 
       const result = await state.fetchSwaps({ from: 8, limit: 2 })
 
-      expect(result).to.be.deep.equal([{ ...swaps[8] }, { ...swaps[9] }])
+      expect(result).to.be.deep.equal(expectedResponse([{ ...swaps[8] }, { ...swaps[9] }]))
     })
   })
 
