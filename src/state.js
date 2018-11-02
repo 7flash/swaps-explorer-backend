@@ -9,6 +9,7 @@ class State {
     this.get = promisify(this.redisClient.get).bind(this.redisClient)
     this.hgetall = promisify(this.redisClient.hgetall).bind(this.redisClient)
     this.lrange = promisify(this.redisClient.lrange).bind(this.redisClient)
+    this.llen = promisify(this.redisClient.llen).bind(this.redisClient)
   }
 
   async fetchReputation(address) {
@@ -59,11 +60,16 @@ class State {
     return swap
   }
 
-  async fetchSwaps({ from = 0, limit = 0 } = {}) {
+  async fetchSwaps({ from = -1, limit = 0 } = {}) {
     let swaps = []
 
+    let index = 0
+    if (from === -1) {
+      index = await this.llen(this.swapsName) - 1
+    }
+
     let hasEnded = false
-    let index = from
+
     while(!hasEnded) {
       const swapSecretHash = await this.lrange(this.swapsName, index, index)
 
@@ -71,8 +77,12 @@ class State {
         const swap = await this.fetchSwap(swapSecretHash[0])
         swaps.push(swap)
 
-        if (limit === 0 || swaps.length < limit) {
-          index++
+        if ((limit === 0 || swaps.length < limit) && (from !== -1 || index > 0)) {
+          if (from == -1) {
+            index--
+          } else {
+            index++
+          }
         } else {
           hasEnded = true
         }

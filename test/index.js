@@ -57,7 +57,7 @@ const expectedResponse = (swaps) => {
         }
       }
     }
-  })
+  }).reverse()
 
   return response
 }
