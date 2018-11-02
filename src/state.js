@@ -30,11 +30,13 @@ class State {
     if (swapDepositEvent) {
       const buyerAddress = swapDepositEvent.buyer
       const sellerAddress = swapDepositEvent.seller
+      const value = swapDepositEvent.value
 
       const buyerReputation = await this.fetchReputation(buyerAddress)
       const sellerReputation = await this.fetchReputation(sellerAddress)
 
       swap.alice = {
+        value: value,
         from: {
           address: sellerAddress,
           reputation: sellerReputation

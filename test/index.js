@@ -26,11 +26,11 @@ const setupMockDatabase = async ({ redisClient, swaps, swapsName, reputationName
   const rpush = promisify(redisClient.rpush).bind(redisClient)
 
   for (let i = 0; i < swaps.length; i++) {
-    const { buyer, seller, secretHash } = swaps[i]
+    const { buyer, seller, secretHash, value } = swaps[i]
 
     await rpush(swapsName, secretHash)
 
-    await hmset(`${swapsName}:${secretHash}:deposit`, { buyer, seller, secretHash })
+    await hmset(`${swapsName}:${secretHash}:deposit`, { buyer, seller, value, secretHash })
     await hmset(`${swapsName}:${secretHash}:withdraw`, { buyer, seller })
 
     await incrby(`${reputationName}:${buyer}`, 1)
@@ -40,11 +40,12 @@ const setupMockDatabase = async ({ redisClient, swaps, swapsName, reputationName
 
 const expectedResponse = (swaps) => {
   const response = swaps.map((swap) => {
-    const { buyer, seller } = swap
+    const { buyer, seller, value } = swap
 
     return {
       status: 'success',
       alice:{
+        value: value,
         from: {
           address: seller,
           reputation: 1
