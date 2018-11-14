@@ -7,12 +7,12 @@ const express = require("express")
 const app = express()
 
 const EthState = require('./state')
-const state = new EthState({ redisClient, swapsName: config.ethSwaps, reputationName: config.ethReputation })
+const state = new EthState({ redisClient, swapsName: config.ethSwaps, swapsBitcoinName: config.btcSwaps, reputationName: config.reputation })
 
 const stateRouter = express.Router()
 
 stateRouter.get('/ethbtc', async (req, res) => {
-  const from = req.query.from || 0
+  const from = req.query.from || -1
   const limit = req.query.limit || 10
 
   const swaps = await state.fetchSwaps({ from, limit })
