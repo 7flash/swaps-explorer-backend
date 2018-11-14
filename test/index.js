@@ -14,7 +14,9 @@ const randomSwaps = (count) => {
     const value = Math.round(Math.random() * 1000).toString()
     const secretHash = crypto.randomBytes(32).toString('hex')
 
-    result.push({ buyer, seller, value, secretHash })
+    const btc = { buyer, seller, secret: '0x1', secretHash, timeLock: 10, withdrawTx: '0x1', fundingAddress: buyer, withdrawFee: 10, value }
+
+    result.push({ buyer, seller, value, secretHash, btc })
   }
 
   return result
@@ -30,6 +32,7 @@ const setupMockDatabase = async ({ redisClient, swaps, swapsName, reputationName
 
     await rpush(swapsName, secretHash)
 
+    await hmset(`${swapsName}:${swaps[i].btc.secretHash.replace(/^0x/, '')}`, swaps[i].btc)
     await hmset(`${swapsName}:${secretHash}:deposit`, { buyer, seller, value, secretHash })
     await hmset(`${swapsName}:${secretHash}:withdraw`, { buyer, seller })
 
@@ -41,6 +44,7 @@ const setupMockDatabase = async ({ redisClient, swaps, swapsName, reputationName
 const expectedResponse = (swaps) => {
   const response = swaps.map((swap) => {
     const { buyer, seller, value } = swap
+    const { buyer: buyerBtc, seller: sellerBtc, value: valueBtc, withdrawFee } = swap.btc
 
     return {
       status: 'success',
@@ -51,14 +55,28 @@ const expectedResponse = (swaps) => {
           address: seller,
           reputation: 1
         },
+        to: {
+          address: buyerBtc,
+          reputation: 1
+        }
       },
       bob: {
         asset: 'BTC',
+        value: valueBtc,
+        fee: `${withdrawFee}`,
         to: {
           address: buyer,
           reputation: 1
+        },
+        from: {
+          address: sellerBtc,
+          reputation: 1
+        },
+        transactions: {
+          withdrawTx: '0x1',
+          fundingAddress: buyerBtc
         }
-      }
+      },
     }
   }).reverse()
 
@@ -104,7 +122,7 @@ describe('Swaps', () => {
 
   describe('Swaps State', () => {
     it('shold fetch all ETHBTC swaps from redis database', async () => {
-      const state = new State({ redisClient, swapsName, reputationName })
+      const state = new State({ redisClient, swapsName, swapsBitcoinName: swapsName, reputationName })
 
       const result = await state.fetchSwaps()
 
@@ -112,11 +130,11 @@ describe('Swaps', () => {
     })
 
     it('should fetch range of ETHBTC swaps from redis database', async () => {
-      const state = new State({ redisClient, swapsName, reputationName })
+      const state = new State({ redisClient, swapsName, swapsBitcoinName: swapsName, reputationName })
 
-      const result = await state.fetchSwaps({ from: 8, limit: 2 })
+      const result = await state.fetchSwaps({ from: 1, limit: 1 })
 
-      expect(result).to.be.deep.equal(expectedResponse([{ ...swaps[8] }, { ...swaps[9] }]))
+      expect(result).to.be.deep.equal(expectedResponse([{ ...swaps[1] }, ]))
     })
   })
 

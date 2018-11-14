@@ -67,8 +67,8 @@ class State {
     if (swapBitcoin) {
       const { buyer: buyerAddress, seller: sellerAddress, secret, secretHash, timeLock, withdrawTx, fundingAddress, withdrawFee, value } = swapBitcoin
 
-      const buyerReputation = await this.fetchReputation(buyerReputation)
-      const sellerReputation = await this.fetchReputation(sellerReputation)
+      const buyerReputation = await this.fetchReputation(buyerAddress)
+      const sellerReputation = await this.fetchReputation(sellerAddress)
 
       swap.alice = { ...swap.alice, ...{
         to: {
@@ -94,7 +94,7 @@ class State {
   async fetchSwaps({ from = -1, limit = 0 } = {}) {
     let swaps = []
 
-    let index = 0
+    let index = from
     if (from === -1) {
       index = await this.llen(this.swapsName) - 1
     }
