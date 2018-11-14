@@ -1,9 +1,10 @@
 const { promisify } = require("util")
 
 class State {
-  constructor({ redisClient, swapsName, reputationName }) {
+  constructor({ redisClient, swapsName, swapsBitcoinName, reputationName }) {
     this.redisClient = redisClient
     this.swapsName = swapsName
+    this.swapsBitcoinName = swapsBitcoinName
     this.reputationName = reputationName
 
     this.get = promisify(this.redisClient.get).bind(this.redisClient)
@@ -22,6 +23,8 @@ class State {
     let swap = {
       status: 'waiting'
     }
+
+    const swapBitcoin = await this.hgetall(`${this.swapsBitcoinName}:${swapSecretHash}`)
 
     const swapDepositEvent = await this.hgetall(`${this.swapsName}:${swapSecretHash}:deposit`)
     const swapWithdrawEvent = await this.hgetall(`${this.swapsName}:${swapSecretHash}:withdraw`)
@@ -59,6 +62,30 @@ class State {
 
     if (swapRefundEvent) {
       swap.status = 'refund'
+    }
+
+    if (swapBitcoin) {
+      const { buyer: buyerAddress, seller: sellerAddress, secret, secretHash, timeLock, withdrawTx, fundingAddress, withdrawFee, value } = swapBitcoin
+
+      const buyerReputation = await this.fetchReputation(buyerReputation)
+      const sellerReputation = await this.fetchReputation(sellerReputation)
+
+      swap.alice = { ...swap.alice, ...{
+        to: {
+          address: buyerAddress,
+          reputation: buyerReputation
+        }
+      }}
+
+      swap.bob = { ...swap.bob, ...{
+          value: value,
+          fee: withdrawFee,
+          from: {
+            address: sellerAddress,
+            reputation: sellerReputation
+          },
+          transactions: { withdrawTx, fundingAddress }
+      }}
     }
 
     return swap
