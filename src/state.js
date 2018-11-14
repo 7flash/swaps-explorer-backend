@@ -24,7 +24,7 @@ class State {
       status: 'waiting'
     }
 
-    const swapBitcoin = await this.hgetall(`${this.swapsBitcoinName}:${swapSecretHash}`)
+    const swapBitcoin = await this.hgetall(`${this.swapsBitcoinName}:${swapSecretHash.replace(/^0x/, '')}`)
 
     const swapDepositEvent = await this.hgetall(`${this.swapsName}:${swapSecretHash}:deposit`)
     const swapWithdrawEvent = await this.hgetall(`${this.swapsName}:${swapSecretHash}:withdraw`)
