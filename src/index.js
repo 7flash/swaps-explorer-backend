@@ -21,7 +21,10 @@ stateRouter.get('/ethbtc', async (req, res) => {
 })
 
 stateRouter.get('/reputation/:address', async (req, res) => {
-  const address = req.params.address
+  let address = req.params.address.toString()
+  if (address.startsWith('0x')) {
+    address = address.toLowerCase()
+  }
 
   const reputation = await state.fetchReputation(address)
 
