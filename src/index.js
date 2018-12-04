@@ -26,7 +26,12 @@ stateRouter.get('/reputation/:address', async (req, res) => {
     address = address.toLowerCase()
   }
 
-  const reputation = await state.fetchReputation(address)
+  let reputation = await state.fetchReputation(address)
+  if (Number.parseInt(reputation)) {
+    reputation = Number.parseInt(reputation)
+  } else {
+    reputation = 0
+  }
 
   res.json({
     address, reputation
