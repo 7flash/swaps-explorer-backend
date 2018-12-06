@@ -16,7 +16,7 @@ class State {
   async fetchReputation(address) {
     const reputation = await this.get(`${this.reputationName}:${address}`)
 
-    return reputation
+    return Number.parseInt(reputation)
   }
 
   async fetchSwap(swapSecretHash) {
