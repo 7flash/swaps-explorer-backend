@@ -16,19 +16,33 @@ class State {
   async fetchReputation(address) {
     const reputation = await this.get(`${this.reputationName}:${address}`)
 
-    return Number.parseInt(reputation)
+    return Number.parseInt(reputation) || null
+  }
+
+  async fetchSwapRaw(swapSecretHash) {
+    const bitcoin = await this.hgetall(`${this.swapsBitcoinName}:${swapSecretHash.replace(/^0x/, '')}`)
+    const deposit = await this.hgetall(`${this.swapsName}:${swapSecretHash}:deposit`)
+    const withdraw = await this.hgetall(`${this.swapsName}:${swapSecretHash}:withdraw`)
+    const refund = await this.hgetall(`${this.swapsName}:${swapSecretHash}:refund`)
+
+    return {
+      bitcoin, deposit, withdraw, refund
+    }
   }
 
   async fetchSwap(swapSecretHash) {
-    let swap = {
-      status: 'waiting'
+    const swapAggregated = {
+      status: 'waiting',
+      alice: {},
+      bob: {}
     }
 
-    const swapBitcoin = await this.hgetall(`${this.swapsBitcoinName}:${swapSecretHash.replace(/^0x/, '')}`)
-
-    const swapDepositEvent = await this.hgetall(`${this.swapsName}:${swapSecretHash}:deposit`)
-    const swapWithdrawEvent = await this.hgetall(`${this.swapsName}:${swapSecretHash}:withdraw`)
-    const swapRefundEvent = await this.hgetall(`${this.swapsName}:${swapSecretHash}:refund`)
+    const {
+      bitcoin: swapBitcoin,
+      deposit: swapDepositEvent,
+      withdraw: swapWithdrawEvent,
+      refund: swapRefundEvent
+    } = await this.fetchSwapRaw(swapSecretHash)
 
     if (swapDepositEvent) {
       const buyerAddress = swapDepositEvent.buyer
@@ -38,7 +52,7 @@ class State {
       const buyerReputation = await this.fetchReputation(buyerAddress)
       const sellerReputation = await this.fetchReputation(sellerAddress)
 
-      swap.alice = {
+      swapAggregated.alice = {
         asset: 'ETH',
         value: value,
         from: {
@@ -47,7 +61,7 @@ class State {
         }
       }
 
-      swap.bob = {
+      swapAggregated.bob = {
         asset: 'BTC',
         to: {
           address: buyerAddress,
@@ -57,11 +71,11 @@ class State {
     }
 
     if (swapWithdrawEvent) {
-      swap.status = 'success'
+      swapAggregated.status = 'success'
     }
 
     if (swapRefundEvent) {
-      swap.status = 'refund'
+      swapAggregated.status = 'refund'
     }
 
     if (swapBitcoin) {
@@ -70,14 +84,14 @@ class State {
       const buyerReputation = await this.fetchReputation(buyerAddress)
       const sellerReputation = await this.fetchReputation(sellerAddress)
 
-      swap.alice = { ...swap.alice, ...{
+      swapAggregated.alice = { ...swapAggregated.alice, ...{
         to: {
           address: buyerAddress,
           reputation: buyerReputation
         }
       }}
 
-      swap.bob = { ...swap.bob, ...{
+      swapAggregated.bob = { ...swapAggregated.bob, ...{
           value: value,
           fee: withdrawFee,
           from: {
@@ -88,7 +102,7 @@ class State {
       }}
     }
 
-    return swap
+    return swapAggregated
   }
 
   async fetchSwaps({ from = -1, limit = 0 } = {}) {

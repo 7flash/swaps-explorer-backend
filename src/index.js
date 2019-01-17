@@ -26,6 +26,14 @@ stateRouter.get('/ethbtc', async (req, res) => {
   res.json(swaps)
 })
 
+stateRouter.get('/swap/:secretHash', async (req, res) => {
+  const secretHash = req.params.secretHash.toString()
+
+  const swap = await state.fetchSwapRaw(secretHash)
+
+  res.json({ swap })
+})
+
 stateRouter.get('/reputation/:address', async (req, res) => {
   let address = req.params.address.toString()
   if (address.startsWith('0x')) {
