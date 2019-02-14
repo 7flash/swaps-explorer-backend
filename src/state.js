@@ -32,6 +32,7 @@ class State {
 
   async fetchSwap(swapSecretHash) {
     const swapAggregated = {
+      swapSecretHash,
       status: 'waiting',
       alice: {},
       bob: {}
